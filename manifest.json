@@ -1,20 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "Zenn Mute Warning",
-  "version": "1.0.0",
-  "description": "ミュートしたユーザーの記事を開いたとき警告を表示する",
+  "name": "Zenn/Qiita Mute Warning",
+  "version": "1.1.0",
+  "description": "ミュートしたユーザーの記事を開いたとき、画面上部に警告を表示する",
   "permissions": [
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
-    "https://zenn.dev/*"
+    "https://zenn.dev/*",
+    "https://qiita.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://zenn.dev/*"],
+      "matches": [
+        "https://zenn.dev/*",
+        "https://qiita.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
