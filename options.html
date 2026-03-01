@@ -17,18 +17,6 @@
     Enable console logs for debugging
   </label>
   <div class="hint">デフォルトはOFFです。問題調査時のみONにしてください。</div>
-
-  <script>
-    const DEBUG_FLAG_KEY = 'zmw_debug_mode_enabled';
-    const debugToggle = document.getElementById('debugToggle');
-
-    chrome.storage.local.get([DEBUG_FLAG_KEY]).then(result => {
-      debugToggle.checked = Boolean(result[DEBUG_FLAG_KEY]);
-    });
-
-    debugToggle.addEventListener('change', () => {
-      chrome.storage.local.set({ [DEBUG_FLAG_KEY]: debugToggle.checked });
-    });
-  </script>
+  <script src="options.js" defer></script>
 </body>
 </html>
