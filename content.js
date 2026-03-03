@@ -228,6 +228,8 @@ const cachedMutesForSite = {};
 
 async function getMutedUsernamesForSite(site) {
   if (cachedMutesForSite[site] != null) return cachedMutesForSite[site];
+  // Qiitaのミュートリストはqiita.comのcontent scriptがSAVE_QIITA_MUTESで保存するため、
+  // qiita.comを最近訪問していない場合はキャッシュが空になることがある。
   try {
     const response = await chrome.runtime.sendMessage({ type: 'GET_MUTED_USERNAMES', site });
     cachedMutesForSite[site] = response?.usernames || [];
@@ -253,8 +255,17 @@ const processedBlueskyPosts = new WeakSet();
 
 async function processBlueskyPost(postEl) {
   if (processedBlueskyPosts.has(postEl)) return;
-  processedBlueskyPosts.add(postEl);
 
+  let processedSuccessfully = false;
+  try {
+    await checkPostForMutedAuthor(postEl);
+    processedSuccessfully = true;
+  } finally {
+    if (processedSuccessfully) processedBlueskyPosts.add(postEl);
+  }
+}
+
+async function checkPostForMutedAuthor(postEl) {
   const links = postEl.querySelectorAll('a[href]');
   for (const link of links) {
     const href = link.href;
@@ -287,6 +298,8 @@ function showBlueskyWarning(postEl, username, site) {
   msg.textContent = `⚠️ このポストにリンクされている著者 @${username} (${site}) はミュートしているユーザーです。`;
 
   const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.setAttribute('aria-label', '閉じる');
   btn.textContent = '×';
   btn.style.cssText = `background:transparent;border:none;color:#fff;cursor:pointer;font-size:16px;padding:0 0 0 8px;`;
   btn.addEventListener('click', e => { e.stopPropagation(); banner.remove(); });
@@ -296,26 +309,36 @@ function showBlueskyWarning(postEl, username, site) {
   postEl.prepend(banner);
 }
 
-function scanBlueskyPosts() {
-  document.querySelectorAll('a[href]').forEach(link => {
-    const href = link.href;
-    for (const { re } of BLUESKY_URL_PATTERNS) {
-      if (re.test(href)) {
-        const postEl = findBlueskyPostElement(link);
-        if (postEl) processBlueskyPost(postEl);
-        break;
-      }
+function processBlueskyLink(link) {
+  const href = link.href;
+  for (const { re } of BLUESKY_URL_PATTERNS) {
+    if (re.test(href)) {
+      const postEl = findBlueskyPostElement(link);
+      if (postEl) processBlueskyPost(postEl);
+      break;
     }
-  });
+  }
+}
+
+function scanBlueskyPosts() {
+  document.querySelectorAll('a[href]').forEach(link => processBlueskyLink(link));
 }
 
 function initBluesky() {
   log('Bluesky timeline監視開始');
   scanBlueskyPosts();
-  let scanTimer = null;
-  const observer = new MutationObserver(() => {
-    if (scanTimer) clearTimeout(scanTimer);
-    scanTimer = setTimeout(scanBlueskyPosts, 300);
+  const observer = new MutationObserver(mutationsList => {
+    for (const mutation of mutationsList) {
+      if (mutation.addedNodes.length === 0) continue;
+      mutation.addedNodes.forEach(node => {
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const el = /** @type {Element} */ (node);
+        if (el.tagName === 'A' && el.hasAttribute('href')) {
+          processBlueskyLink(/** @type {HTMLAnchorElement} */ (el));
+        }
+        el.querySelectorAll('a[href]').forEach(link => processBlueskyLink(link));
+      });
+    }
   });
   observer.observe(document.body, { childList: true, subtree: true });
 }
