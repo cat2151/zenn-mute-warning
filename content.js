@@ -289,8 +289,8 @@ function showBlueskyWarning(postEl, username, site) {
   banner.className = 'zmw-inline-warning';
   banner.style.cssText = `
     background: #b91c1c; color: #fff; padding: 8px 12px;
-    font-size: 13px; font-family: sans-serif; border-radius: 4px;
-    margin: 4px 8px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 13px; font-family: sans-serif; border-radius: 4px 4px 0 0;
+    margin: 4px 8px 0 8px; display: flex; align-items: center; justify-content: space-between;
   `;
   banner.addEventListener('click', e => e.stopPropagation());
 
